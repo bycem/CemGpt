@@ -1,0 +1,40 @@
+{
+    "name": "generate-unit-test",
+    "displayName": "Generate Unit Test",
+    "description": "Generate unit tests and refactor code using OpenAI's API",
+    "version": "1.0.0",
+    "publisher": "your-publisher-name",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:extension.generateUnitTest",
+        "onCommand:extension.refactorCode"
+    ],
+    "main": "./src/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "extension.generateUnitTest",
+                "title": "Generate Unit Test"
+            },
+            {
+                "command": "extension.refactorCode",
+                "title": "Refactor Code"
+            }
+        ],
+        "configuration": {
+            "properties": {
+                "generateUnitTest.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "OpenAI API key"
+                }
+            }
+        }
+    },
+    "dependencies": {}
+}
