@@ -89,16 +89,32 @@ function activate(context) {
                 const fileNameResult = await fileNameResponse.json();
                 const newFileName = fileNameResult.choices[0].message.content.trim();
 
-                const originalFilePath = editor.document.uri.fsPath;
-                const originalDir = originalFilePath.substring(0, originalFilePath.lastIndexOf('/'));
-                const newFileUri = vscode.Uri.parse('untitled:' + originalDir + '/' + newFileName);
+                const folderUri = await vscode.window.showOpenDialog({
+                    canSelectFolders: true,
+                    canSelectFiles: false,
+                    canSelectMany: false,
+                    openLabel: 'Select folder to save the Unit Test'
+                });
                 
-                // Yeni dosyayı oluşturma ve test kodunu ekleme
-                const document = await vscode.workspace.openTextDocument(newFileUri);
-                const edit = new vscode.WorkspaceEdit();
-                edit.insert(newFileUri, new vscode.Position(0, 0), unitTestCode);
-                await vscode.workspace.applyEdit(edit);
-                await document.save();
+                if (!folderUri || folderUri.length === 0) {
+                    vscode.window.showErrorMessage('No folder selected. Operation cancelled.');
+                    return;
+                }
+                
+                const newFileUri = vscode.Uri.file(folderUri[0].fsPath + '/' + newFileName);
+
+// Create and open the new file
+await vscode.workspace.fs.writeFile(newFileUri, Buffer.from(''));
+
+vscode.workspace.openTextDocument(newFileUri).then((document) => {
+    const edit = new vscode.WorkspaceEdit();
+    edit.insert(newFileUri, new vscode.Position(0, 0), unitTestCode);
+    return vscode.workspace.applyEdit(edit).then(() => {
+        document.save().then(() => {
+            vscode.window.showInformationMessage("Unit test generated successfully!");
+        });
+    });
+});
 
                 vscode.window.showInformationMessage("Unit test generated successfully!");
             } catch (error) {
