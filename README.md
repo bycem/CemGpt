@@ -1,4 +1,4 @@
-# Generate Unit Test & Refactor Code Extension
+# Generate Unit Test & Refactor Code Extension With ChatGpt
 
 This VS Code extension allows you to generate unit tests and refactor code snippets using OpenAI's API. It leverages the power of AI to automate the creation of unit tests and refactor code based on clean code principles and best practices.
 
