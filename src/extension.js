@@ -40,7 +40,7 @@ function activate(context) {
                 const requestBody = {
                     model: "gpt-4o-mini",
                     messages: messages,
-                    max_tokens: 1000
+                    max_tokens: 2000
                 };
 
                 // Unit Test kodunu oluşturma isteği
@@ -61,7 +61,7 @@ function activate(context) {
                 const unitTestCode = codeResult.choices[0].message.content.trim();
 
                 messages.push(codeResult.choices[0].message);
-                messages.push( {
+                messages.push({
                     role: "system",
                     content: "Get related filename of unit test. Just return filename with extension."
                 });
@@ -70,7 +70,7 @@ function activate(context) {
                 const fileNameRequest = {
                     model: "gpt-4o-mini",
                     messages: messages,
-                    max_tokens: 1000
+                    max_tokens: 200
                 };
 
                 const fileNameResponse = await fetch(apiUrl, {
@@ -95,26 +95,26 @@ function activate(context) {
                     canSelectMany: false,
                     openLabel: 'Select folder to save the Unit Test'
                 });
-                
+
                 if (!folderUri || folderUri.length === 0) {
                     vscode.window.showErrorMessage('No folder selected. Operation cancelled.');
                     return;
                 }
-                
+
                 const newFileUri = vscode.Uri.file(folderUri[0].fsPath + '/' + newFileName);
 
-// Create and open the new file
-await vscode.workspace.fs.writeFile(newFileUri, Buffer.from(''));
+                // Create and open the new file
+                await vscode.workspace.fs.writeFile(newFileUri, Buffer.from(''));
 
-vscode.workspace.openTextDocument(newFileUri).then((document) => {
-    const edit = new vscode.WorkspaceEdit();
-    edit.insert(newFileUri, new vscode.Position(0, 0), unitTestCode);
-    return vscode.workspace.applyEdit(edit).then(() => {
-        document.save().then(() => {
-            vscode.window.showInformationMessage("Unit test generated successfully!");
-        });
-    });
-});
+                vscode.workspace.openTextDocument(newFileUri).then((document) => {
+                    const edit = new vscode.WorkspaceEdit();
+                    edit.insert(newFileUri, new vscode.Position(0, 0), unitTestCode);
+                    return vscode.workspace.applyEdit(edit).then(() => {
+                        document.save().then(() => {
+                            vscode.window.showInformationMessage("Unit test generated successfully!");
+                        });
+                    });
+                });
 
                 vscode.window.showInformationMessage("Unit test generated successfully!");
             } catch (error) {
@@ -128,24 +128,31 @@ vscode.workspace.openTextDocument(newFileUri).then((document) => {
         if (!editor) {
             return;
         }
-    
+
         const selection = editor.selection;
         const selectedText = editor.document.getText(selection);
-    
+
         const apiKey = vscode.workspace.getConfiguration().get('generateUnitTest.apiKey');
         if (!apiKey) {
             vscode.window.showErrorMessage("OpenAI API key is not set. Please set it in the settings.");
             return;
         }
-    
+
         const apiUrl = "https://api.openai.com/v1/chat/completions";
-    
+
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: "Refactoring Code...",
             cancellable: false
         }, async (progress) => {
             try {
+
+                const originalFilePath = editor.document.uri.fsPath;
+                const originalDir = originalFilePath.substring(0, originalFilePath.lastIndexOf('/'));
+                const originalFileName = originalFilePath.split('/').pop();
+                const refactoredFileName = originalFileName.replace('.cs', 'Refactored.cs');
+                const newFileUri = vscode.Uri.parse('untitled:' + originalDir + '/' + refactoredFileName);
+
                 let messages = [
                     {
                         role: "system",
@@ -157,13 +164,13 @@ vscode.workspace.openTextDocument(newFileUri).then((document) => {
                         content: selectedText
                     }
                 ];
-    
+
                 const requestBody = {
                     model: "gpt-4o-mini",
                     messages: messages,
                     max_tokens: 1000
                 };
-    
+
                 // Refactoring code request
                 const codeResponse = await fetch(apiUrl, {
                     method: 'POST',
@@ -173,27 +180,23 @@ vscode.workspace.openTextDocument(newFileUri).then((document) => {
                     },
                     body: JSON.stringify(requestBody)
                 });
-    
+
                 if (!codeResponse.ok) {
                     throw new Error(`HTTP error! status: ${codeResponse.status}`);
                 }
-    x
+                
                 const codeResult = await codeResponse.json();
                 const refactoredCode = codeResult.choices[0].message.content.trim();
-               
-                const originalFilePath = editor.document.uri.fsPath;
-                const originalDir = originalFilePath.substring(0, originalFilePath.lastIndexOf('/'));
-                const originalFileName = originalFilePath.split('/').pop();
-                const refactoredFileName = originalFileName.replace('.cs', 'Refactored.cs');
-                const newFileUri = vscode.Uri.parse('untitled:' + originalDir + '/' + refactoredFileName);
-                
+
+
+
                 // Creating a new file and inserting refactored code
                 const document = await vscode.workspace.openTextDocument(newFileUri);
                 const edit = new vscode.WorkspaceEdit();
                 edit.insert(newFileUri, new vscode.Position(0, 0), refactoredCode);
                 await vscode.workspace.applyEdit(edit);
                 await document.save();
-    
+
                 vscode.window.showInformationMessage("Code refactored successfully!");
             } catch (error) {
                 vscode.window.showErrorMessage("Failed to refactor code: " + error.message);
@@ -205,7 +208,7 @@ vscode.workspace.openTextDocument(newFileUri).then((document) => {
     context.subscriptions.push(refactorCodeEvent);
 }
 
-function deactivate() {}
+function deactivate() { }
 
 module.exports = {
     activate,
