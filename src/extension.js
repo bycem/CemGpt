@@ -1,5 +1,32 @@
 const vscode = require('vscode');
 
+const API_URL = 'https://api.openai.com/v1/chat/completions';
+const MODEL = 'gpt-4o-mini';
+
+async function chatCompletion(messages, apiKey, maxTokens) {
+    const requestBody = {
+        model: MODEL,
+        messages,
+        max_tokens: maxTokens,
+    };
+
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.choices[0].message;
+}
+
 function activate(context) {
     let generateUnitTestEvent = vscode.commands.registerCommand('extension.generateUnitTest', async function () {
         const editor = vscode.window.activeTextEditor;
@@ -15,8 +42,6 @@ function activate(context) {
             vscode.window.showErrorMessage("OpenAI API key is not set. Please set it in the settings.");
             return;
         }
-
-        const apiUrl = "https://api.openai.com/v1/chat/completions";
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -37,57 +62,18 @@ function activate(context) {
                     }
                 ];
 
-                const requestBody = {
-                    model: "gpt-4o-mini",
-                    messages: messages,
-                    max_tokens: 2000
-                };
+                const unitTestMessage = await chatCompletion(messages, apiKey, 2000);
+                const unitTestCode = unitTestMessage.content.trim();
 
-                // Unit Test kodunu oluşturma isteği
-                const codeResponse = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (!codeResponse.ok) {
-                    throw new Error(`HTTP error! status: ${codeResponse.status}`);
-                }
-
-                const codeResult = await codeResponse.json();
-                const unitTestCode = codeResult.choices[0].message.content.trim();
-
-                messages.push(codeResult.choices[0].message);
+                messages.push(unitTestMessage);
                 messages.push({
                     role: "system",
                     content: "Get related filename of unit test. Just return filename with extension."
                 });
 
                 // Dosya adı için API isteği
-                const fileNameRequest = {
-                    model: "gpt-4o-mini",
-                    messages: messages,
-                    max_tokens: 200
-                };
-
-                const fileNameResponse = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(fileNameRequest)
-                });
-
-                if (!fileNameResponse.ok) {
-                    throw new Error(`HTTP error! status: ${fileNameResponse.status}`);
-                }
-
-                const fileNameResult = await fileNameResponse.json();
-                const newFileName = fileNameResult.choices[0].message.content.trim();
+                const newFileNameMessage = await chatCompletion(messages, apiKey, 200);
+                const newFileName = newFileNameMessage.content.trim();
 
                 const folderUri = await vscode.window.showOpenDialog({
                     canSelectFolders: true,
@@ -138,8 +124,6 @@ function activate(context) {
             return;
         }
 
-        const apiUrl = "https://api.openai.com/v1/chat/completions";
-
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: "Refactoring Code...",
@@ -165,28 +149,8 @@ function activate(context) {
                     }
                 ];
 
-                const requestBody = {
-                    model: "gpt-4o-mini",
-                    messages: messages,
-                    max_tokens: 1000
-                };
-
-                // Refactoring code request
-                const codeResponse = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (!codeResponse.ok) {
-                    throw new Error(`HTTP error! status: ${codeResponse.status}`);
-                }
-                
-                const codeResult = await codeResponse.json();
-                const refactoredCode = codeResult.choices[0].message.content.trim();
+                const refactorMessage = await chatCompletion(messages, apiKey, 1000);
+                const refactoredCode = refactorMessage.content.trim();
 
 
 
